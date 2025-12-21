@@ -6,13 +6,15 @@ factory functions to create LLM instances for different purposes.
 
 All model configurations are defined in llm_config.yaml.
 No environment variables are used for model selection.
+
+Updated for LangChain v1.2+ with init_chat_model for unified model initialization.
+Supports Gemini thinking_level and OpenAI reasoning_effort parameters.
 """
 
 from pathlib import Path
 from typing import List, Dict, Any
 from omegaconf import OmegaConf, DictConfig
-from langchain_openai import ChatOpenAI
-from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain.chat_models import init_chat_model
 
 
 # Load configuration from YAML
@@ -20,58 +22,66 @@ CONFIG_PATH = Path(__file__).parent / "llm_config.yaml"
 _config = OmegaConf.load(CONFIG_PATH)
 
 
+def _get_model_provider(model_name: str) -> str:
+    """
+    Determines the model provider based on the model name.
+
+    Args:
+        model_name: The name of the model.
+
+    Returns:
+        Provider string for init_chat_model.
+    """
+    model_lower = model_name.lower()
+
+    if "gpt" in model_lower or "o3-mini" in model_name or "o4-mini" in model_name:
+        return "openai"
+    elif "gemini" in model_lower:
+        return "google_genai"
+    elif "claude" in model_lower:
+        return "anthropic"
+    else:
+        raise NotImplementedError(f"LLM {model_name} provider not supported")
+
+
 def _get_single_llm_model(model_cfg: DictConfig):
     """
-    Creates a single LLM instance from a model configuration.
+    Creates a single LLM instance from a model configuration using init_chat_model.
 
     Args:
         model_cfg: Configuration dict containing model_name, temperature, etc.
 
     Returns:
-        LLM instance (ChatOpenAI or ChatGoogleGenerativeAI)
+        LLM instance initialized via init_chat_model (provider-agnostic)
     """
     model_name = model_cfg.model_name
+    provider = _get_model_provider(model_name)
 
-    # OpenAI models (GPT family)
-    if "gpt" in model_name.lower():
-        kwargs = {
-            "model": model_name,
-            "temperature": model_cfg.get("temperature", 0.7),
-        }
-        if hasattr(model_cfg, "max_tokens"):
-            kwargs["max_tokens"] = model_cfg.max_tokens
-        if hasattr(model_cfg, "reasoning_effort"):
+    # Build kwargs for init_chat_model
+    kwargs = {
+        "model": model_name,
+        "model_provider": provider,
+    }
+
+    # Common parameters
+    if "temperature" in model_cfg:
+        kwargs["temperature"] = model_cfg.temperature
+    if "max_tokens" in model_cfg:
+        kwargs["max_tokens"] = model_cfg.max_tokens
+
+    # OpenAI-specific parameters
+    if provider == "openai":
+        if "reasoning_effort" in model_cfg:
             kwargs["reasoning_effort"] = model_cfg.reasoning_effort
-        return ChatOpenAI(**kwargs)
 
-    # OpenAI reasoning models (o3-mini, o4-mini)
-    elif "o3-mini" in model_name or "o4-mini" in model_name:
-        kwargs = {"model": model_name}
-        if hasattr(model_cfg, "max_tokens"):
-            kwargs["max_tokens"] = model_cfg.max_tokens
-        return ChatOpenAI(**kwargs)
-
-    # Google Gemini models
-    elif "gemini" in model_name.lower():
-        kwargs = {
-            "model": model_name,
-            "temperature": model_cfg.get("temperature", 0.7),
-        }
-        if hasattr(model_cfg, "max_tokens"):
-            kwargs["max_tokens"] = model_cfg.max_tokens
-        if hasattr(model_cfg, "thinking_mode"):
-            kwargs["include_thoughts"] = model_cfg.thinking_mode
-        if hasattr(model_cfg, "thinking_budget"):
+    # Google Gemini-specific parameters (langchain-google-genai native support)
+    if provider == "google_genai":
+        if "thinking_level" in model_cfg:
+            kwargs["thinking_level"] = model_cfg.thinking_level
+        if "thinking_budget" in model_cfg:
             kwargs["thinking_budget"] = model_cfg.thinking_budget
-        return ChatGoogleGenerativeAI(**kwargs)
 
-    # Add other providers as needed
-    # elif "claude" in model_name.lower():
-    #     from langchain_anthropic import ChatAnthropic
-    #     return ChatAnthropic(...)
-
-    else:
-        raise NotImplementedError(f"LLM {model_name} not supported")
+    return init_chat_model(**kwargs)
 
 
 def get_llm_models(cfg_section: DictConfig) -> Dict[str, Any]:
@@ -156,14 +166,28 @@ def get_remake_llm():
     return _get_single_llm_model(_config.models.remake)
 
 
+def _format_model_info(cfg: DictConfig) -> str:
+    """Format model configuration for logging."""
+    parts = [cfg.model_name]
+    if "temperature" in cfg:
+        parts.append(f"temp={cfg.temperature}")
+    if "thinking_level" in cfg:
+        parts.append(f"thinking={cfg.thinking_level}")
+    if "thinking_budget" in cfg:
+        parts.append(f"thinking_budget={cfg.thinking_budget}")
+    if "reasoning_effort" in cfg:
+        parts.append(f"reasoning={cfg.reasoning_effort}")
+    return f"{parts[0]} ({', '.join(parts[1:])})" if len(parts) > 1 else parts[0]
+
+
 # Logging configuration on module load
 print("=" * 60)
 print("LLM Configuration Loaded from: llm_config.yaml")
 print("=" * 60)
-print(f"Chat          : {_config.models.chat.model_name} (temp={_config.models.chat.temperature})")
-print(f"Chat Fallback : {_config.models.chat_fallback.model_name} (temp={_config.models.chat_fallback.temperature})")
-print(f"Diary         : {_config.models.diary.model_name} (temp={_config.models.diary.temperature})")
-print(f"Diary Split   : {_config.models.diary_split.model_name} (temp={_config.models.diary_split.temperature})")
-print(f"Emotion (x4)  : {_config.models.emotion_finding.primary.model_name} (temps: 0.0, 0.25, 0.5, 0.75)")
-print(f"Remake        : {_config.models.remake.model_name} (temp={_config.models.remake.temperature})")
+print(f"Chat          : {_format_model_info(_config.models.chat)}")
+print(f"Chat Fallback : {_format_model_info(_config.models.chat_fallback)}")
+print(f"Diary         : {_format_model_info(_config.models.diary)}")
+print(f"Diary Split   : {_format_model_info(_config.models.diary_split)}")
+print(f"Emotion (x4)  : {_format_model_info(_config.models.emotion_finding.primary)}")
+print(f"Remake        : {_format_model_info(_config.models.remake)}")
 print("=" * 60)

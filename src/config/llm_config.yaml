@@ -1,64 +1,57 @@
 # LLM Configuration for ANeuk AI
 # Edit this file to change models, temperatures, and parameters
 # No environment variables needed - everything is configured here!
+# Updated for LangChain v1.2+ with init_chat_model support
 
 models:
   # Chat conversation model
   chat:
-    model_name: "gemini-flash-latest"
-    temperature: 0.7
-    thinking_mode: true
-    thinking_budget: 512
+    model_name: "gemini-3-flash-preview"
+    temperature: 1.0
+    thinking_level: "minimal"
 
   # Chat fallback model (used when primary chat model returns empty response)
   chat_fallback:
-    model_name: "gpt-5-mini"
+    model_name: "gpt-5.2"
     temperature: 1.0
-    reasoning_effort: "medium"
+    reasoning_effort: "low"
 
   # Diary generation model
   diary:
-    model_name: "gemini-flash-latest"
-    temperature: 0.7
-    thinking_mode: true
-    thinking_budget: 512
+    model_name: "gemini-3-flash-preview"
+    temperature: 1
+    thinking_level: "low"
 
   # Diary splitting model (deterministic)
   diary_split:
-    model_name: "gemini-flash-latest"
-    temperature: 0.0
-    thinking_mode: true
-    thinking_budget: 512
+    model_name: "gemini-3-flash-preview"
+    temperature: 1.0
+    thinking_level: "minimal"
 
   # Emotion finding models with varying temperatures
   emotion_finding:
     primary:
-      model_name: "gemini-flash-latest"
-      temperature: 0.0
-      thinking_mode: true
-      thinking_budget: 512
+      model_name: "gemini-3-flash-preview"
+      temperature: 1.0
+      thinking_level: "low"
 
     low:
-      model_name: "gemini-flash-latest"
-      temperature: 0.25
-      thinking_mode: true
-      thinking_budget: 512
+      model_name: "gemini-3-flash-preview"
+      temperature: 1.0
+      thinking_level: "low"
 
     medium:
-      model_name: "gemini-flash-latest"
-      temperature: 0.5
-      thinking_mode: true
-      thinking_budget: 512
+      model_name: "gemini-3-flash-preview"
+      temperature: 1.0
+      thinking_level: "minimal"
 
     high:
-      model_name: "gemini-flash-latest"
-      temperature: 0.75
-      thinking_mode: true
-      thinking_budget: 512
+      model_name: "gemini-3-flash-preview"
+      temperature: 1.0
+      thinking_level: "minimal"
 
   # Sentence remaking model
   remake:
-    model_name: "gemini-flash-latest"
-    temperature: 0.25
-    thinking_mode: true
-    thinking_budget: 512
+    model_name: "gemini-3-flash-preview"
+    temperature: 1.0
+    thinking_level: "low"
