@@ -54,4 +54,4 @@ models:
   remake:
     model_name: "gemini-3-flash-preview"
     temperature: 1.0
-    thinking_level: "low"
+    thinking_level: "minimal"
