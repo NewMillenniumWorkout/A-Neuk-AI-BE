@@ -80,6 +80,12 @@ def _get_single_llm_model(model_cfg: DictConfig):
             kwargs["thinking_level"] = model_cfg.thinking_level
         if "thinking_budget" in model_cfg:
             kwargs["thinking_budget"] = model_cfg.thinking_budget
+        # Exclude thinking content from response to avoid JSON parsing issues
+        if "include_thoughts" in model_cfg:
+            kwargs["include_thoughts"] = model_cfg.include_thoughts
+        else:
+            # Default to False to prevent thinking content breaking parsers
+            kwargs["include_thoughts"] = False
 
     return init_chat_model(**kwargs)
 
